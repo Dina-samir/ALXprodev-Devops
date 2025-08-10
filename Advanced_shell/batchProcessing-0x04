@@ -3,6 +3,7 @@
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 OUTPUT_DIR="pokemon_data_parallel"
 ERROR_LOG="fetch_errors_parallel.log"
+TIMEOUT=10  # seconds
 
 mkdir -p "$OUTPUT_DIR"
 : > "$ERROR_LOG"  # Clear previous error log
@@ -17,11 +18,23 @@ fetch_pokemon() {
     fi
 }
 
+pids=()
+
 for name in "${POKEMON_LIST[@]}"; do
     echo "Fetching data for $name..."
     fetch_pokemon "$name" &
+    pids+=($!)
+done
+
+# Wait for a timeout, then kill any remaining background jobs
+sleep "$TIMEOUT"
+for pid in "${pids[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "Killing process $pid (fetch took too long)"
+        kill "$pid"
+    fi
 done
 
 wait  # Wait for all background jobs to finish
 
-echo "All fetch operations
+echo "All fetch operations completed."
